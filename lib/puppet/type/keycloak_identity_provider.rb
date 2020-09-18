@@ -51,7 +51,7 @@ Manage Keycloak identity providers
 
   newparam(:provider_id) do
     desc 'providerId'
-    newvalues('oidc')
+    newvalues('oidc', 'keycloak-oidc')
     defaultto 'oidc'
     munge { |v| v }
   end
@@ -258,7 +258,7 @@ Manage Keycloak identity providers
     if self[:realm].nil?
       raise Puppet::Error, 'realm is required'
     end
-    if self[:ensure].to_s == 'present' && self[:provider_id] == 'oidc'
+    if self[:ensure].to_s == 'present' && (self[:provider_id] == 'oidc' || self[:provider_id] == 'keycloak-oidc')
       if self[:authorization_url].nil?
         raise Puppet::Error, 'authorization_url is required'
       end
