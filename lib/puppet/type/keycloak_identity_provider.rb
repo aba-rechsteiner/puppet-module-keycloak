@@ -99,6 +99,10 @@ Manage Keycloak identity providers
     defaultto :false
   end
 
+  newproperty(:gui_order, parent: PuppetX::Keycloak::IntegerProperty) do
+    desc 'guiOrder'
+  end
+
   newproperty(:first_broker_login_flow_alias) do
     desc 'firstBrokerLoginFlowAlias'
     defaultto 'first broker login'
