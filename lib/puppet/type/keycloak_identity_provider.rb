@@ -102,6 +102,7 @@ Manage Keycloak identity providers
 
   newproperty(:gui_order, parent: PuppetX::Keycloak::IntegerProperty) do
     desc 'guiOrder'
+    munge { |v| v.to_s }
   end
 
   newproperty(:first_broker_login_flow_alias) do
