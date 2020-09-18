@@ -110,6 +110,13 @@ Manage Keycloak identity providers
     munge { |v| v }
   end
 
+  newproperty(:sync_mode) do
+    desc 'sync_mode'
+    defaultto 'IMPORT'
+    newvalues('IMPORT', 'LEGACY', 'FORCE')
+    munge { |v| v }
+  end
+
   # BEGIN: oidc
 
   newproperty(:hide_on_login_page, boolean: true) do
