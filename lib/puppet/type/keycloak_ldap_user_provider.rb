@@ -203,6 +203,12 @@ Manage Keycloak LDAP user providers
     ]
   end
 
+  newproperty(:trust_email, boolean: true) do
+    desc 'trustEmail'
+    newvalues(:true, :false)
+    defaultto :false
+  end
+
   validate do
     if self[:use_kerberos_for_password_authentication] && self[:auth_type] == 'none'
       raise Puppet::Error, 'use_kerberos_for_password_authentication is not valid for auth_type none'
