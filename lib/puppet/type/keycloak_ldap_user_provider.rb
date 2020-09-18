@@ -209,6 +209,18 @@ Manage Keycloak LDAP user providers
     defaultto :false
   end
 
+  newproperty(:full_sync_period_, parent: PuppetX::Keycloak::IntegerProperty) do
+    desc 'fullSyncPeriod'
+    defaultto '-1'
+    munge { |v| v.to_s }
+  end
+
+  newproperty(:changed_sync_period_, parent: PuppetX::Keycloak::IntegerProperty) do
+    desc 'changedSyncPeriod'
+    defaultto '-1'
+    munge { |v| v.to_s }
+  end
+
   validate do
     if self[:use_kerberos_for_password_authentication] && self[:auth_type] == 'none'
       raise Puppet::Error, 'use_kerberos_for_password_authentication is not valid for auth_type none'
