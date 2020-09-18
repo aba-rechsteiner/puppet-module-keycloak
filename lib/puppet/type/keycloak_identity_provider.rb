@@ -198,6 +198,11 @@ Manage Keycloak identity providers
     defaultto :true
   end
 
+  newproperty(:jwks_url) do
+    desc 'jwksUrl'
+    munge { |v| v }
+  end
+
   newproperty(:login_hint, boolean: true) do
     desc 'loginHint'
     newvalues(:true, :false)
