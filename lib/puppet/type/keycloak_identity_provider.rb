@@ -111,7 +111,7 @@ Manage Keycloak identity providers
   end
 
   newproperty(:sync_mode) do
-    desc 'sync_mode'
+    desc 'syncMode'
     defaultto 'IMPORT'
     newvalues('IMPORT', 'LEGACY', 'FORCE')
     munge { |v| v }
