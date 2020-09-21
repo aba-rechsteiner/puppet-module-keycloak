@@ -102,7 +102,7 @@ Puppet::Type.type(:keycloak_protocol_mapper).provide(:kcadm, parent: Puppet::Pro
     data[:protocol] = resource[:protocol]
     data[:protocolMapper] = resource[:type]
     data[:config] = {}
-    if ['oidc-usermodel-property-mapper', 'saml-user-property-mapper', 'oidc-usermodel-attribute-mapper'].include?(protocol_mapper[:type])
+    if ['oidc-usermodel-property-mapper', 'saml-user-property-mapper', 'oidc-usermodel-attribute-mapper'].include?(resource[:type])
       data[:config][:'user.attribute'] = resource[:user_attribute] if resource[:user_attribute]
     end
     if ['oidc-usermodel-property-mapper', 'oidc-group-membership-mapper', 'oidc-usermodel-attribute-mapper'].include?(resource[:type])
@@ -186,7 +186,7 @@ Puppet::Type.type(:keycloak_protocol_mapper).provide(:kcadm, parent: Puppet::Pro
       data[:protocol] = resource[:protocol]
       data[:protocolMapper] = resource[:type]
       config = {}
-      if ['oidc-usermodel-property-mapper', 'saml-user-property-mapper', 'oidc-usermodel-attribute-mapper'].include?(protocol_mapper[:type])
+      if ['oidc-usermodel-property-mapper', 'saml-user-property-mapper', 'oidc-usermodel-attribute-mapper'].include?(resource[:type])
         config[:'user.attribute'] = resource[:user_attribute] if resource[:user_attribute]
       end
       if ['oidc-usermodel-property-mapper', 'oidc-group-membership-mapper', 'oidc-usermodel-attribute-mapper'].include?(resource[:type])
