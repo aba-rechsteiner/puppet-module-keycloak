@@ -79,7 +79,7 @@ Manage Keycloak client scope protocol mappers
   newproperty(:user_attribute) do
     desc 'user.attribute. Default to `resource_name` for `type` `oidc-usermodel-property-mapper` or `saml-user-property-mapper`'
     defaultto do
-      if @resource[:type] == 'oidc-usermodel-property-mapper' || @resource[:type] == 'saml-user-property-mapper' || @resource[:type] == 'oidc-usermodel-attribute-mapper'
+      if ['oidc-usermodel-property-mapper', 'saml-user-property-mapper', 'oidc-usermodel-attribute-mapper'].include?(@resource[:type])
         @resource[:resource_name]
       else
         nil
