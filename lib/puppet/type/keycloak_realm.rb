@@ -251,7 +251,7 @@ Manage Keycloak realms
     desc 'smtpServer replyToDisplayName'
   end
 
-  newproperty(brute_force_protected:, boolean: true) do
+  newproperty(:brute_force_protected, boolean: true) do
     desc 'bruteForceProtected'
     newvalues(:true, :false)
   end
