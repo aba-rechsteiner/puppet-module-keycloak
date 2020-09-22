@@ -276,7 +276,7 @@ Manage Keycloak identity providers
     if self[:realm].nil?
       raise Puppet::Error, 'realm is required'
     end
-    if self[:ensure].to_s == 'present' && (self[:provider_id] == 'oidc' || self[:provider_id] == 'keycloak-oidc')
+    if self[:ensure].to_s == 'present' && ['oidc', 'keycloak-oidc'].include?(self[:provider_id])
       if self[:authorization_url].nil?
         raise Puppet::Error, 'authorization_url is required'
       end
