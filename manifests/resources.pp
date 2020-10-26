@@ -28,6 +28,11 @@ class keycloak::resources {
   } else {
     $protocol_mappers = $keycloak::protocol_mappers
   }
+  if $keycloak::client_protocol_mappers_merge {
+    $client_protocol_mappers = lookup('keycloak::client_protocol_mappers', Hash, 'deep', {})
+  } else {
+    $client_protocol_mappers = $keycloak::client_protocol_mappers
+  }
   if $keycloak::identity_providers_merge {
     $identity_providers = lookup('keycloak::identity_providers', Hash, 'deep', {})
   } else {
@@ -78,6 +83,9 @@ class keycloak::resources {
   }
   $protocol_mappers.each |$name, $protocol_mapper| {
     keycloak_protocol_mapper { $name: * => $protocol_mapper }
+  }
+  $client_protocol_mappers.each |$name, $client_protocol_mapper| {
+    keycloak_client_protocol_mapper { $name: * => $client_protocol_mapper }
   }
   $identity_providers.each |$name, $data| {
     keycloak_identity_provider { $name: * => $data }

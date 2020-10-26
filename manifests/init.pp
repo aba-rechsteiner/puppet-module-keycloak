@@ -157,6 +157,10 @@
 #   Hash that is used to define keycloak_protocol_mapper resources.
 # @param protocol_mappers_merge
 #   Boolean that sets if `protocol_mappers` should be merged from Hiera.
+# @param client_protocol_mappers
+#   Hash that is used to define keycloak_protocol_mapper resources.
+# @param client_protocol_mappers_merge
+#   Boolean that sets if `client_protocol_mappers` should be merged from Hiera.
 # @param clients
 #   Hash that is used to define keycloak_client resources.
 # @param clients_merge
@@ -283,6 +287,8 @@ class keycloak (
   Boolean $client_scopes_merge = false,
   Hash $protocol_mappers = {},
   Boolean $protocol_mappers_merge = false,
+  Hash $client_protocol_mappers = {},
+  Boolean $client_protocol_mappers_merge = false,
   Hash $identity_providers = {},
   Boolean $identity_providers_merge = false,
   Hash $clients = {},

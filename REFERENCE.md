@@ -548,6 +548,22 @@ Boolean that sets if `protocol_mappers` should be merged from Hiera.
 
 Default value: `false`
 
+##### `client_protocol_mappers`
+
+Data type: `Hash`
+
+Hash that is used to define keycloak_client_protocol_mapper resources.
+
+Default value: {}
+
+##### `client_protocol_mappers_merge`
+
+Data type: `Boolean`
+
+Boolean that sets if `client_protocol_mappers` should be merged from Hiera.
+
+Default value: `false`
+
 ##### `clients`
 
 Data type: `Hash`
