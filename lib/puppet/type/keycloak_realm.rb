@@ -100,10 +100,28 @@ Manage Keycloak realms
     defaultto :false
   end
 
+  newproperty(:registration_allowed, boolean: true) do
+    desc 'registrationAllowed'
+    newvalues(:true, :false)
+    defaultto :false
+  end
+
   newproperty(:login_with_email_allowed, boolean: true) do
     desc 'loginWithEmailAllowed'
     newvalues(:true, :false)
     defaultto :true
+  end
+
+  newproperty(:reset_password_allowed, boolean: true) do
+    desc 'resetPasswordAllowed'
+    newvalues(:true, :false)
+    defaultto :false
+  end
+
+  newproperty(:verify_email, boolean: true) do
+    desc 'verifyEmail'
+    newvalues(:true, :false)
+    defaultto :false
   end
 
   newproperty(:browser_flow) do
@@ -256,4 +274,8 @@ Manage Keycloak realms
     newvalues(:true, :false)
   end
 
+  newproperty(:roles, array_matching: :all, parent: PuppetX::Keycloak::ArrayProperty) do
+    desc 'roles'
+    defaultto ['offline_access', 'uma_authorization']
+  end
 end

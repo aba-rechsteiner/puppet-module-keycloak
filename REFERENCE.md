@@ -1242,6 +1242,24 @@ Default value: absent
 
 access.token.lifespan
 
+##### `browser_flow`
+
+authenticationFlowBindingOverrides.browser (Use flow alias, not ID)
+
+Default value: absent
+
+##### `direct_grant_flow`
+
+authenticationFlowBindingOverrides.direct_grant (Use flow alias, not ID)
+
+Default value: absent
+
+##### `roles`
+
+roles
+
+Default value: []
+
 #### Parameters
 
 The following parameters are available in the `keycloak_client` type.
@@ -1854,6 +1872,10 @@ linkOnly
 
 Default value: false
 
+##### `gui_order`
+
+guiOrder
+
 ##### `first_broker_login_flow_alias`
 
 firstBrokerLoginFlowAlias
@@ -1863,6 +1885,14 @@ Default value: first broker login
 ##### `post_broker_login_flow_alias`
 
 postBrokerLoginFlowAlias
+
+##### `sync_mode`
+
+Valid values: IMPORT, LEGACY, FORCE
+
+syncMode
+
+Default value: IMPORT
 
 ##### `hide_on_login_page`
 
@@ -1927,6 +1957,10 @@ Valid values: `true`, `false`
 useJwksUrl
 
 Default value: true
+
+##### `jwks_url`
+
+jwksUrl
 
 ##### `login_hint`
 
@@ -1998,7 +2032,7 @@ realm
 
 ##### `provider_id`
 
-Valid values: oidc
+Valid values: oidc, keycloak-oidc
 
 providerId
 
@@ -2340,6 +2374,26 @@ customUserSearchFilter
 
 Default value: absent
 
+##### `trust_email`
+
+Valid values: `true`, `false`
+
+trustEmail
+
+Default value: false
+
+##### `full_sync_period`
+
+fullSyncPeriod
+
+Default value: -1
+
+##### `changed_sync_period`
+
+changedSyncPeriod
+
+Default value: -1
+
 #### Parameters
 
 The following parameters are available in the `keycloak_ldap_user_provider` type.
@@ -2605,6 +2659,14 @@ rememberMe
 
 Default value: false
 
+##### `registration_allowed`
+
+Valid values: `true`, `false`
+
+registrationAllowed
+
+Default value: false
+
 ##### `login_with_email_allowed`
 
 Valid values: `true`, `false`
@@ -2612,6 +2674,22 @@ Valid values: `true`, `false`
 loginWithEmailAllowed
 
 Default value: true
+
+##### `reset_password_allowed`
+
+Valid values: `true`, `false`
+
+resetPasswordAllowed
+
+Default value: false
+
+##### `verify_email`
+
+Valid values: `true`, `false`
+
+verifyEmail
+
+Default value: false
 
 ##### `browser_flow`
 
@@ -2754,6 +2832,18 @@ smtpServer replyto
 ##### `smtp_server_reply_to_display_name`
 
 smtpServer replyToDisplayName
+
+##### `brute_force_protected`
+
+Valid values: `true`, `false`
+
+bruteForceProtected
+
+##### `roles`
+
+roles
+
+Default value: ['offline_access', 'uma_authorization']
 
 #### Parameters
 

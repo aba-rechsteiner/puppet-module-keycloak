@@ -18,12 +18,43 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
     ]
   end
 
+  def self.auth_flow_properties
+    {
+      browser_flow: 'browser',
+      direct_grant_flow: 'direct_grant',
+    }
+  end
+
+  def auth_flow_properties
+    self.class.auth_flow_properties
+  end
+
   def attribute_key(property)
     if dot_attributes_properties.include?(property)
       property.to_s.tr('_', '.')
     else
       property
     end
+  end
+
+  def self.get_client_roles(realm, client)
+    output = kcadm('get', "clients/#{client}/roles", realm)
+    Puppet.debug("Client #{client} in realm #{realm} roles: #{output}")
+    data = JSON.parse(output)
+    roles = []
+    data.each do |d|
+      # filter out 'uma_protection' client role created when
+      # authorization_services_enabled property is set to true
+      if !d['composite'] && d['name'] != 'uma_protection'
+        roles.push(d['name'])
+      end
+    end
+    Puppet.debug("Returned client roles: #{roles}")
+    roles
+  end
+
+  def get_client_roles(*args)
+    self.class.get_client_roles(*args)
   end
 
   def self.instances
@@ -61,10 +92,12 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
         client[:realm] = realm
         client[:name] = "#{client[:client_id]} on #{client[:realm]}"
         type_properties.each do |property|
+          next if [:roles].include?(property)
           camel_key = camelize(property)
           dot_key = property.to_s.tr('_', '.')
           key = property.to_s
           attributes = d['attributes'] || {}
+          auth_flows = d['authenticationFlowBindingOverrides'] || {}
           if property == :secret
             value = secret
           elsif d.key?(camel_key)
@@ -73,6 +106,9 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
             value = attributes[dot_key]
           elsif attributes.key?(key)
             value = attributes[key]
+          elsif auth_flows.key?(auth_flow_properties[property])
+            flow_alias = flow_ids(realm)[auth_flows[auth_flow_properties[property]]]
+            value = flow_alias
           end
           if !!value == value # rubocop:disable Style/DoubleNegation
             value = value.to_s.to_sym
@@ -81,6 +117,7 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
         end
         # The absence of a value should be 'absent'
         client[:login_theme] = 'absent' if client[:login_theme].nil?
+        client[:roles] = get_client_roles(realm, client[:id])
         clients << new(client)
       end
     end
@@ -113,6 +150,32 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
     @scope_map
   end
 
+  def self.flow_ids(realm)
+    @flow_ids = {} unless @flow_ids
+    return @flow_ids[realm] if @flow_ids[realm]
+    output = kcadm('get', 'authentication/flows', realm, nil, ['id', 'alias'])
+    begin
+      data = JSON.parse(output)
+    rescue JSON::ParserError
+      Puppet.debug('Unable to parse output from kcadm get authentication/flows')
+      return {}
+    end
+    @flow_ids[realm] = {}
+    data.each do |d|
+      @flow_ids[realm][d['alias']] = d['id']
+      @flow_ids[realm][d['id']] = d['alias']
+    end
+    @flow_ids[realm]
+  end
+
+  def flow_ids
+    @flow_ids = {} unless @flow_ids
+    return @flow_ids unless @flow_ids.empty?
+    self.class.instance_variable_set(:@flow_ids, nil)
+    @flow_ids = self.class.flow_ids(resource[:realm])
+    @flow_ids
+  end
+
   def create
     raise(Puppet::Error, "Realm is mandatory for #{resource.type} #{resource.name}") if resource[:realm].nil?
 
@@ -121,7 +184,7 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
     data[:clientId] = resource[:client_id]
     data[:secret] = resource[:secret] if resource[:secret]
     type_properties.each do |property|
-      next if [:default_client_scopes, :optional_client_scopes].include?(property)
+      next if [:default_client_scopes, :optional_client_scopes, :roles].include?(property)
       next unless resource[property.to_sym]
       value = convert_property_value(resource[property.to_sym])
       next if value == 'absent' || value == :absent || value.nil?
@@ -130,6 +193,12 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
           data[:attributes] = {}
         end
         data[:attributes][attribute_key(property)] = value
+      elsif auth_flow_properties.include?(property)
+        unless data.key?(:authenticationFlowBindingOverrides)
+          data[:authenticationFlowBindingOverrides] = {}
+        end
+        flow_id = flow_ids[value]
+        data[:authenticationFlowBindingOverrides][auth_flow_properties[property]] = flow_id
       else
         data[camelize(property)] = value
       end
@@ -196,6 +265,33 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
         raise Puppet::Error, "kcadm update clients/#{resource[:id]}/optional-client-scopes/#{scope_id}: #{e.message}"
       end
     end
+    role = nil
+    if resource[:roles]
+      roles = get_client_roles(resource[:realm], resource[:id])
+      remove_roles = roles - resource[:roles]
+      begin
+        remove_roles.each do |s|
+          role = s
+          kcadm('delete', "clients/#{resource[:id]}/roles/#{role}", resource[:realm])
+        end
+      rescue Puppet::ExecutionFailure => e
+        raise Puppet::Error, "kcadm delete realms/#{resource[:realm]}/clients/#{resource[:id]}/roles/#{role}: #{e.message}"
+      end
+      add_roles = resource[:roles] - roles
+      begin
+        add_roles.each do |s|
+          role = s
+          role_data = { 'description' => "${role_#{role}}", 'name' => role }
+          role_data_t = Tempfile.new('keycloak_client_role')
+          role_data_t.write(JSON.pretty_generate(role_data))
+          role_data_t.close
+          Puppet.debug(IO.read(role_data_t.path))
+          kcadm('create', "clients/#{resource[:id]}/roles", resource[:realm], role_data_t.path)
+        end
+      rescue Puppet::ExecutionFailure => e
+        raise Puppet::Error, "kcadm create realms/#{resource[:realm]}/clients/#{resource[:id]}/roles/#{role}: #{e.message}"
+      end
+    end
     @property_hash[:ensure] = :present
   end
 
@@ -231,8 +327,9 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
 
       data = {}
       data[:clientId] = resource[:client_id]
+      data[:authenticationFlowBindingOverrides] = {}
       type_properties.each do |property|
-        next if [:default_client_scopes, :optional_client_scopes].include?(property)
+        next if [:default_client_scopes, :optional_client_scopes, :roles].include?(property)
         next unless @property_flush[property.to_sym]
         value = convert_property_value(@property_flush[property.to_sym])
         value = nil if value.to_s == 'absent'
@@ -241,6 +338,9 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
             data[:attributes] = {}
           end
           data[:attributes][attribute_key(property)] = value
+        elsif auth_flow_properties.include?(property)
+          flow_id = value.nil? ? nil : flow_ids[value]
+          data[:authenticationFlowBindingOverrides][auth_flow_properties[property]] = flow_id
         else
           data[camelize(property)] = value
         end
@@ -312,6 +412,32 @@ Puppet::Type.type(:keycloak_client).provide(:kcadm, parent: Puppet::Provider::Ke
           end
         rescue Puppet::ExecutionFailure => e
           raise Puppet::Error, "kcadm update clients/#{id}/optional-client-scopes/#{scope_id}: #{e.message}"
+        end
+      end
+      role = nil
+      if @property_flush[:roles]
+        remove_roles = @property_hash[:roles] - @property_flush[:roles]
+        begin
+          remove_roles.each do |s|
+            role = s
+            kcadm('delete', "clients/#{resource[:id]}/roles/#{role}", resource[:realm])
+          end
+        rescue Puppet::ExecutionFailure => e
+          raise Puppet::Error, "kcadm delete realms/#{resource[:realm]}/clients/#{resource[:id]}/roles/#{role}: #{e.message}"
+        end
+        add_roles = @property_flush[:roles] - @property_hash[:roles]
+        begin
+          add_roles.each do |s|
+            role = s
+            role_data = { 'description' => "${role_#{role}}", 'name' => role }
+            role_data_t = Tempfile.new('keycloak_client_role')
+            role_data_t.write(JSON.pretty_generate(role_data))
+            role_data_t.close
+            Puppet.debug(IO.read(role_data_t.path))
+            kcadm('create', "clients/#{resource[:id]}/roles", resource[:realm], role_data_t.path)
+          end
+        rescue Puppet::ExecutionFailure => e
+          raise Puppet::Error, "kcadm create realms/#{resource[:realm]}/clients/#{resource[:id]}/roles/#{role}: #{e.message}"
         end
       end
     end

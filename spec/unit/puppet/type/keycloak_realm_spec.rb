@@ -114,6 +114,9 @@ describe Puppet::Type.type(:keycloak_realm) do
     # Test boolean properties
     [
       :remember_me,
+      :registration_allowed,
+      :reset_password_allowed,
+      :verify_email,
       :login_with_email_allowed,
       :internationalization_enabled,
       :events_enabled,
@@ -122,6 +125,7 @@ describe Puppet::Type.type(:keycloak_realm) do
       :smtp_server_auth,
       :smtp_server_starttls,
       :smtp_server_ssl,
+      :brute_force_protected,
     ].each do |p|
       it "should accept true for #{p}" do
         config[p] = true
@@ -159,6 +163,7 @@ describe Puppet::Type.type(:keycloak_realm) do
       :optional_client_scopes,
       :events_listeners,
       :supported_locales,
+      :roles,
     ].each do |p|
       it "should accept array for #{p}" do
         config[p] = ['foo', 'bar']

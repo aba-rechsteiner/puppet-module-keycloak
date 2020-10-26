@@ -21,6 +21,8 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
         smtp_server_from_display_name     => 'Keycloak',
         smtp_server_reply_to              => 'webmaster@example.org',
         smtp_server_reply_to_display_name => 'Webmaster',
+        brute_force_protected             => false,
+        roles                             => ['offline_access', 'uma_authorization', 'new_role'],
       }
       EOS
 
@@ -32,6 +34,10 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
       on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get realms/test' do
         data = JSON.parse(stdout)
         expect(data['id']).to eq('test')
+        expect(data['bruteForceProtected']).to eq(false)
+        expect(data['registrationAllowed']).to eq(false)
+        expect(data['resetPasswordAllowed']).to eq(false)
+        expect(data['verifyEmail']).to eq(false)
       end
     end
 
@@ -81,6 +87,20 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
         expect(data['smtpServer']['replyToDisplayName']).to eq('Webmaster')
       end
     end
+
+    it 'has correct roles settings' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get roles -r test' do
+        data = JSON.parse(stdout)
+        expected_roles = ['new_role', 'offline_access', 'uma_authorization']
+        realm_roles = []
+        data.each do |d|
+          unless d['composite']
+            realm_roles.push(d['name'])
+          end
+        end
+        expect(expected_roles - realm_roles).to eq([])
+      end
+    end
   end
 
   context 'updates realm' do
@@ -93,6 +113,9 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
       keycloak_realm { 'test':
         ensure => 'present',
         remember_me => true,
+        registration_allowed => true,
+        reset_password_allowed => true,
+        verify_email => true,
         access_code_lifespan => 3600,
         access_token_lifespan => 3600,
         sso_session_idle_timeout => 3600,
@@ -114,7 +137,8 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
         smtp_server_from_display_name     => 'Keycloak',
         smtp_server_reply_to              => 'webmaster@example.org',
         smtp_server_reply_to_display_name => 'Hostmaster',
-
+        brute_force_protected             => true,
+        roles                             => ['uma_authorization', 'new_role', 'other_new_role'],
       }
       EOS
 
@@ -126,6 +150,9 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
       on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get realms/test' do
         data = JSON.parse(stdout)
         expect(data['rememberMe']).to eq(true)
+        expect(data['registrationAllowed']).to eq(true)
+        expect(data['resetPasswordAllowed']).to eq(true)
+        expect(data['verifyEmail']).to eq(true)
         expect(data['accessCodeLifespan']).to eq(3600)
         expect(data['accessTokenLifespan']).to eq(3600)
         expect(data['ssoSessionIdleTimeout']).to eq(3600)
@@ -141,6 +168,7 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
         expect(data['smtpServer']['fromDisplayName']).to eq('Keycloak')
         expect(data['smtpServer']['replyTo']).to eq('webmaster@example.org')
         expect(data['smtpServer']['replyToDisplayName']).to eq('Hostmaster')
+        expect(data['bruteForceProtected']).to eq(true)
       end
     end
 
@@ -160,6 +188,20 @@ describe 'keycloak_realm:', if: RSpec.configuration.keycloak_full do
         expect(data['eventsListeners']).to eq(['jboss-logging'])
         expect(data['adminEventsEnabled']).to eq(true)
         expect(data['adminEventsDetailsEnabled']).to eq(true)
+      end
+    end
+
+    it 'has updated roles settings' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get roles -r test' do
+        data = JSON.parse(stdout)
+        expected_roles = ['new_role', 'other_new_role', 'uma_authorization']
+        realm_roles = []
+        data.each do |d|
+          unless d['composite']
+            realm_roles.push(d['name'])
+          end
+        end
+        expect(expected_roles - realm_roles).to eq([])
       end
     end
   end

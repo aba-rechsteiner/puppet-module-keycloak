@@ -52,6 +52,11 @@ describe Puppet::Type.type(:keycloak_identity_provider) do
     expect(resource[:provider_id]).to eq('oidc')
   end
 
+  it 'allows keycloak-oidc' do
+    config[:provider_id] = 'keycloak-oidc'
+    expect(resource[:provider_id]).to eq('keycloak-oidc')
+  end
+
   it 'does not allow invalid provider_id' do
     config[:provider_id] = 'foo'
     expect {
@@ -113,10 +118,27 @@ describe Puppet::Type.type(:keycloak_identity_provider) do
       :default_scope,
       :allowed_clock_skew,
       :forward_parameters,
+      :jwks_url,
     ].each do |p|
       it "should accept a #{p}" do
         config[p] = 'foo'
         expect(resource[p]).to eq('foo')
+      end
+      next unless defaults[p]
+      it "should have default for #{p}" do
+        expect(resource[p]).to eq(defaults[p])
+      end
+    end
+  end
+
+  describe 'integer properties' do
+    # Test integer properties
+    [
+      :gui_order,
+    ].each do |p|
+      it "should accept a #{p}" do
+        config[p] = 100
+        expect(resource[p]).to eq('100')
       end
       next unless defaults[p]
       it "should have default for #{p}" do
@@ -198,6 +220,22 @@ describe Puppet::Type.type(:keycloak_identity_provider) do
     end
   end
 
+  describe 'sync_mode' do
+    [
+      'IMPORT', 'LEGACY', 'FORCE'
+    ].each do |v|
+      it "accepts #{v}" do
+        config[:sync_mode] = v
+        expect(resource[:sync_mode]).to eq(v)
+      end
+    end
+
+    it 'does not accept invalid values' do
+      config[:sync_mode] = 'foo'
+      expect { resource }.to raise_error(%r{Invalid})
+    end
+  end
+
   it 'autorequires keycloak_conn_validator' do
     keycloak_conn_validator = Puppet::Type.type(:keycloak_conn_validator).new(name: 'keycloak')
     catalog = Puppet::Resource::Catalog.new
@@ -225,6 +263,17 @@ describe Puppet::Type.type(:keycloak_identity_provider) do
     catalog.add_resource keycloak_realm
     rel = resource.autorequire[0]
     expect(rel.source.ref).to eq(keycloak_realm.ref)
+    expect(rel.target.ref).to eq(resource.ref)
+  end
+
+  it 'autorequires browser flow' do
+    config[:first_broker_login_flow_alias] = 'foo'
+    flow = Puppet::Type.type(:keycloak_flow).new(name: 'foo', realm: 'test')
+    catalog = Puppet::Resource::Catalog.new
+    catalog.add_resource resource
+    catalog.add_resource flow
+    rel = resource.autorequire[0]
+    expect(rel.source.ref).to eq(flow.ref)
     expect(rel.target.ref).to eq(resource.ref)
   end
 

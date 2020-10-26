@@ -9,6 +9,7 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
         datasource_driver => 'mysql',
       }
       keycloak_realm { 'test': ensure => 'present' }
+      keycloak_flow { 'foo on test': ensure => 'present' }
       keycloak_client { 'test.foo.bar':
         realm                          => 'test',
         root_url                       => 'https://test.foo.bar',
@@ -18,6 +19,19 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
         login_theme                    => 'keycloak',
         authorization_services_enabled => false,
         service_accounts_enabled       => true,
+        browser_flow                   => 'foo',
+        roles                          => ['bar_role', 'other_bar_role'],
+      }
+      keycloak_client { 'test.foo.baz':
+        realm                          => 'test',
+        root_url                       => 'https://test.foo.bar',
+        redirect_uris                  => ['https://test.foo.bar/test1'],
+        default_client_scopes          => ['address'],
+        secret                         => 'foobar',
+        login_theme                    => 'keycloak',
+        authorization_services_enabled => false,
+        service_accounts_enabled       => true,
+        browser_flow                   => 'foo',
       }
       EOS
 
@@ -36,6 +50,14 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
         expect(data['attributes']['login_theme']).to eq('keycloak')
         expect(data['authorizationServicesEnabled']).to eq(nil)
         expect(data['serviceAccountsEnabled']).to eq(true)
+        expect(data['authenticationFlowBindingOverrides']['browser']).to eq('foo-test')
+      end
+    end
+
+    it 'has created a client2' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.baz -r test' do
+        data = JSON.parse(stdout)
+        expect(data['authenticationFlowBindingOverrides']['browser']).to eq('foo-test')
       end
     end
 
@@ -43,6 +65,27 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
       on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.bar/client-secret -r test' do
         data = JSON.parse(stdout)
         expect(data['value']).to eq('foobar')
+      end
+    end
+
+    it 'has updated roles settings for client' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.bar/roles -r test' do
+        data = JSON.parse(stdout)
+        expected_roles = ['bar_role', 'other_bar_role']
+        client_roles = []
+        data.each do |d|
+          unless d['composite']
+            client_roles.push(d['name'])
+          end
+        end
+        expect(expected_roles - client_roles).to eq([])
+      end
+    end
+
+    it 'has not updated roles settings for client2' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.baz/roles -r test' do
+        data = JSON.parse(stdout)
+        expect(data).to eq([])
       end
     end
   end
@@ -63,6 +106,19 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
         secret                         => 'foobar',
         authorization_services_enabled => true,
         service_accounts_enabled       => true,
+        roles                          => ['bar_role'],
+      }
+      keycloak_client { 'test.foo.baz':
+        realm                          => 'test',
+        root_url                       => 'https://test.foo.bar',
+        redirect_uris                  => ['https://test.foo.bar/test1'],
+        default_client_scopes          => ['address'],
+        secret                         => 'foobar',
+        login_theme                    => 'keycloak',
+        authorization_services_enabled => false,
+        service_accounts_enabled       => true,
+        browser_flow                   => 'browser',
+        roles                          => ['baz_role'],
       }
       EOS
 
@@ -81,6 +137,24 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
         expect(data['attributes']['login_theme']).to be_nil
         expect(data['authorizationServicesEnabled']).to eq(true)
         expect(data['serviceAccountsEnabled']).to eq(true)
+        expect(data['authenticationFlowBindingOverrides']).to eq({})
+      end
+    end
+
+    it 'has updated a client flow' do
+      browser_id = nil
+      on hosts, "/opt/keycloak/bin/kcadm-wrapper.sh get authentication/flows -r test --fields 'id,alias'" do
+        data = JSON.parse(stdout)
+        data.each do |d|
+          if d['alias'] == 'browser'
+            browser_id = d['id']
+            break
+          end
+        end
+      end
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.baz -r test' do
+        data = JSON.parse(stdout)
+        expect(data['authenticationFlowBindingOverrides']['browser']).to eq(browser_id)
       end
     end
 
@@ -88,6 +162,34 @@ describe 'keycloak_client define:', if: RSpec.configuration.keycloak_full do
       on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.bar/client-secret -r test' do
         data = JSON.parse(stdout)
         expect(data['value']).to eq('foobar')
+      end
+    end
+
+    it 'has updated client roles settings' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.bar/roles -r test' do
+        data = JSON.parse(stdout)
+        expected_roles = ['bar_role']
+        client_roles = []
+        data.each do |d|
+          unless d['composite']
+            client_roles.push(d['name'])
+          end
+        end
+        expect(expected_roles - client_roles).to eq([])
+      end
+    end
+
+    it 'has updated client2 roles settings' do
+      on hosts, '/opt/keycloak/bin/kcadm-wrapper.sh get clients/test.foo.baz/roles -r test' do
+        data = JSON.parse(stdout)
+        expected_roles = ['baz_role']
+        client_roles = []
+        data.each do |d|
+          unless d['composite']
+            client_roles.push(d['name'])
+          end
+        end
+        expect(expected_roles - client_roles).to eq([])
       end
     end
   end
